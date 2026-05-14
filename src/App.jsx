@@ -1,6 +1,7 @@
 import { Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home.jsx'
 import Videos from './pages/Video.jsx';
+import Preview from './pages/Preview.jsx';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/videos" element={<Videos />} />
+        <Route path="/preview/:filename" element={<Preview />} />
       </Routes>
     </div>
   );

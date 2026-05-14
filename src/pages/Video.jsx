@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getVideos } from '../mockApi.js';
 
 export default function Videos() {
@@ -30,7 +31,9 @@ export default function Videos() {
       <h1>Available Videos</h1>
       <ul>
         {videos.map((filename) => (
-          <li key={filename}>{filename}</li>
+          <li key={filename}>
+            <Link to={`/preview/${filename}`}>{filename}</Link>
+          </li>
         ))}
       </ul>
     </div>
