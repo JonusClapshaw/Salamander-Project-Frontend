@@ -46,9 +46,6 @@ export default function Videos() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded-md border border-app-border bg-white/85 px-6 py-10 text-center shadow-soft md:px-12">
-        <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Available Videos</h1>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
