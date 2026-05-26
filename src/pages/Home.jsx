@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function Home() {
   return (
     <section className="space-y-6 md:space-y-8">
@@ -21,12 +23,12 @@ export default function Home() {
           <p className="mt-2 text-app-muted">
             Use Videos to choose a recording, then continue to Preview for tuning and processing.
           </p>
-          <a
-            href="/videos"
+          <Link
+            to="/videos"
             className="mt-6 inline-block rounded-md border border-app-ink bg-app-ink px-4 py-2 text-white transition hover:-translate-y-0.5"
           >
             Open Video List
-          </a>
+          </Link>
         </div>
       </div>
     </section>

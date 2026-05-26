@@ -46,7 +46,7 @@ export default function Preview() {
             Thumbnail / frame preview
           </div> */}
           <img
-              src={filename}
+              src={getThumbnail}
               alt={`Preview thumbnail for ${filename}`}
               className="mb-5 h-56 w-full rounded-md border border-app-panel object-cover md:h-72"
             />
