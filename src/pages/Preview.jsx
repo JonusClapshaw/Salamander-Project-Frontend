@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getThumbnail } from '../mockApi.js';
 import { Link, useParams } from 'react-router-dom';
 
 export default function Preview() {
@@ -41,9 +42,14 @@ export default function Preview() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-md border border-app-border bg-white shadow-soft">
-          <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
+          {/* <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
             Thumbnail / frame preview
-          </div>
+          </div> */}
+          <img
+              src={filename}
+              alt={`Preview thumbnail for ${filename}`}
+              className="mb-5 h-56 w-full rounded-md border border-app-panel object-cover md:h-72"
+            />
         </div>
 
         <div className="rounded-md border border-app-border bg-white shadow-soft">
