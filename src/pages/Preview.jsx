@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getThumbnail } from '../mockApi.js';
 import { Link, useParams } from 'react-router-dom';
 
@@ -7,6 +7,9 @@ export default function Preview() {
   const [previewThumb, setPreviewThumb] = useState('');
   const [currentColor, setCurrentColor] = useState("#000000")
   const [strength, setStrength] = useState(40);
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const [imageReady, setImageReady] = useState(false);
 
   useEffect(() => {
       const file = filename;
@@ -19,6 +22,48 @@ export default function Preview() {
         .then((thumbnailUrl) => setPreviewThumb(thumbnailUrl))
         .catch(() => setPreviewThumb(''));
     }, [filename]);
+
+    useEffect(() => {
+      if (!previewThumb) return;
+      setImageReady(false);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        imgRef.current = img;
+        setImageReady(true);
+      };
+      img.src = previewThumb;
+    }, [previewThumb]);
+
+    useEffect(() => {
+      if (!imageReady) return;
+      const img = imgRef.current;
+      const canvas = canvasRef.current;
+      if (!img || !canvas) return;
+
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const px = data.data;
+
+      for (let i = 0; i < px.length; i += 4) {
+        // px[i]     = red channel of this pixel (0-255)
+        // px[i + 1] = green channel
+        // px[i + 2] = blue channel
+        // px[i + 3] = alpha (transparency, usually leave alone)
+        //
+        // Your algorithm from 334 goes here. Look at the pixel above,
+        // look at `color` and `tolerance`, decide the pixel's new value,
+        // and write it back the same way:
+        //   px[i]     = newRed;
+        //   px[i + 1] = newGreen;
+        //   px[i + 2] = newBlue;
+      }
+
+      ctx.putImageData(data, 0, 0);
+    }, [imageReady, currentColor, strength]);
 
   return (
     <section className="space-y-5">
@@ -72,9 +117,10 @@ export default function Preview() {
         </div>
 
         <div className="rounded-md border border-app-border bg-white shadow-soft">
-          <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-full md:min-h-96">
+          {/* <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-full md:min-h-96">
             Processed output preview
-          </div>
+          </div> */}
+          <canvas ref={canvasRef} />
         </div>
       </div>
 
