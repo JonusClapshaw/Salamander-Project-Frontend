@@ -1,11 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getThumbnail } from '../mockApi.js';
 import { Link, useParams } from 'react-router-dom';
 
 export default function Preview() {
   const { filename } = useParams();
+  const [previewThumb, setPreviewThumb] = useState('');
   const [currentColor, setCurrentColor] = useState("#000000")
   const [strength, setStrength] = useState(40);
+
+  useEffect(() => {
+      const file = filename;
+      if (!file) {
+        setPreviewThumb('');
+        return;
+      }
+  
+      getThumbnail(file)
+        .then((thumbnailUrl) => setPreviewThumb(thumbnailUrl))
+        .catch(() => setPreviewThumb(''));
+    }, [filename]);
 
   return (
     <section className="space-y-5">
@@ -45,11 +58,17 @@ export default function Preview() {
           {/* <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
             Thumbnail / frame preview
           </div> */}
-          <img
-              src={getThumbnail}
+          {previewThumb === "" ? (
+            <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
+              Loading...
+            </div>
+          ) : (
+            <img
+              src={previewThumb}
               alt={`Preview thumbnail for ${filename}`}
               className="mb-5 h-56 w-full rounded-md border border-app-panel object-cover md:h-72"
             />
+          )}
         </div>
 
         <div className="rounded-md border border-app-border bg-white shadow-soft">
