@@ -6,7 +6,7 @@ export default function Preview() {
   const { filename } = useParams();
   const [previewThumb, setPreviewThumb] = useState('');
   const [currentColor, setCurrentColor] = useState("#000000")
-  const [strength, setStrength] = useState(40);
+  const [strength, setStrength] = useState(15);
   const canvasRef = useRef(null);
   const imgRef = useRef(null);
   const [imageReady, setImageReady] = useState(false);
@@ -60,6 +60,30 @@ export default function Preview() {
         //   px[i]     = newRed;
         //   px[i + 1] = newGreen;
         //   px[i + 2] = newBlue;
+
+        // Parse the hex color string into RGB components
+        const r = parseInt(currentColor.slice(1, 3), 16);
+        const g = parseInt(currentColor.slice(3, 5), 16);
+        const b = parseInt(currentColor.slice(5, 7), 16);
+
+        // Euclidean distance between this pixel's color and the target color
+        // (mirrors DistanceImageBinarizer + ColorDistanceFinder)
+        const dr = px[i]     - r;
+        const dg = px[i + 1] - g;
+        const db = px[i + 2] - b;
+        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+        // `strength` is 0–100; scale it to the max possible Euclidean distance (~441)
+        // to match Java's integer threshold concept
+        const threshold = (strength / 100) * 441;
+
+        // White (1) if dist < threshold, black (0) otherwise
+        // mirrors: distanceFinder.distance(color, targetColor) < threshold → 1
+        if (dist < threshold) {
+          px[i] = px[i + 1] = px[i + 2] = 255; // white
+        } else {
+          px[i] = px[i + 1] = px[i + 2] = 0;   // black
+        }
       }
 
       ctx.putImageData(data, 0, 0);
@@ -91,7 +115,7 @@ export default function Preview() {
             type="range"
             min="0"
             max="100"
-            defaultValue="40"
+            defaultValue="15"
             onChange={(e) => setStrength(Number(e.target.value))}
             className="w-full accent-app-blue"
             />
