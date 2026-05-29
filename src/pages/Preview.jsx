@@ -96,7 +96,8 @@ export default function Preview() {
           <h1 className="text-center text-3xl font-semibold tracking-tight md:text-4xl">{filename}</h1>
         </div>
       </div>
-        <div className="grid grid-cols-2">
+
+      <div className="grid grid-cols-2">
             <div className="grid grid-cols-3 max-w-lg rounded-md border border-app-border bg-white px-4 py-2 mx-2 shadow-soft">
               <p className="text-center pt-2">Choose your color:</p>
                 <input 
@@ -123,28 +124,25 @@ export default function Preview() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-md border border-app-border bg-white shadow-soft">
-          {/* <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
-            Thumbnail / frame preview
-          </div> */}
+        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-5">
           {previewThumb === "" ? (
-            <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-96">
+            <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
               Loading...
             </div>
           ) : (
             <img
               src={previewThumb}
               alt={`Preview thumbnail for ${filename}`}
-              className="mb-5 h-56 w-full rounded-md border border-app-panel object-cover md:h-72"
+              className="max-h-full max-w-full rounded-md border border-app-panel object-contain"
             />
           )}
         </div>
 
-        <div className="rounded-md border border-app-border bg-white shadow-soft">
-          {/* <div className="flex h-72 items-center justify-center bg-app-panel/40 text-center text-app-muted md:h-full md:min-h-96">
-            Processed output preview
-          </div> */}
-          <canvas ref={canvasRef} />
+        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-5">
+          <canvas
+            ref={canvasRef}
+            style={{ maxHeight: '100%', maxWidth: '100%' }}
+          />
         </div>
       </div>
 
