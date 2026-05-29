@@ -124,7 +124,7 @@ export default function Preview() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-5">
+        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
           {previewThumb === "" ? (
             <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
               Loading...
@@ -138,7 +138,7 @@ export default function Preview() {
           )}
         </div>
 
-        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-5">
+        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
           <canvas
             ref={canvasRef}
             style={{ maxHeight: '100%', maxWidth: '100%' }}
