@@ -1,51 +1,73 @@
-// Fake data the mock functions return. Replace these with realistic
-// values once you've looked at the real API's example responses.
-const videos = [
-  "salamander1.mp4",
-  "salamander2.mov",
-  "forest_intro.mp4",
-  "tank_view_long.mp4",
-];
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '';
 
-const thumbnails = {
-  // Map filename -> URL of an image to use as its thumbnail.
-  // For now, use any salamander image you have or a placeholder service.
-  "salamander1.mp4": "./salamander1.jpeg",
+const fallbackThumbnails = {
+  "salamander1.mp4": "/salamander1.jpeg",
   "salamander2.mov": "https://placehold.co/320x180?text=salamander2",
   "forest_intro.mp4": "https://placehold.co/320x180?text=forest_intro",
   "tank_view_long.mp4": "https://placehold.co/320x180?text=tank_view_long",
 };
 
-// Tiny helper that adds a fake delay so loading states are visible
-// during development. Real networks aren't instant; pretending they
-// are will hide UI bugs.
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function apiUrl(path) {
+  return `${API_BASE}${path}`;
+}
+
+async function fetchJson(path, options = {}) {
+  const response = await fetch(apiUrl(path), options);
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
+  }
+  return response.json();
+}
 
 export async function getVideos() {
-  await delay(400);
-  return videos;
+  const data = await fetchJson('/api/videos');
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.videos)) {
+    return data.videos;
+  }
+
+  throw new Error('Unexpected /api/videos response format.');
 }
 
 export async function getThumbnail(filename) {
-  await delay(300);
-  if (!thumbnails[filename]) {
-    throw new Error(`No thumbnail for ${filename}`);
+  const encoded = encodeURIComponent(filename);
+
+  const candidates = [
+    apiUrl(`/thumbnail/${encoded}`),
+    apiUrl(`/api/thumbnail/${encoded}`),
+  ];
+
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, { method: 'GET' });
+      if (response.ok) {
+        return url;
+      }
+    } catch {
+      // Try next candidate endpoint.
+    }
   }
-  return thumbnails[filename];
+
+  if (fallbackThumbnails[filename]) {
+    return fallbackThumbnails[filename];
+  }
+
+  throw new Error(`No thumbnail for ${filename}`);
 }
 
 export async function submitProcessingJob(filename, targetColor, threshold) {
-  await delay(500);
-  // Pretend the server gave us a job id.
-  return { jobId: `mock-${Date.now()}` };
+  return fetchJson('/api/process', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ filename, targetColor, threshold }),
+  });
 }
 
 export async function getJobStatus(jobId) {
-  await delay(300);
-  // Pretend the job finished successfully.
-  return {
-    jobId,
-    status: "complete",
-    csvUrl: "https://example.com/results.csv",
-  };
+  return fetchJson(`/api/results?jobId=${encodeURIComponent(jobId)}`);
 }

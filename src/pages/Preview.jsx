@@ -1,93 +1,150 @@
 import { useState, useEffect, useRef } from 'react';
-import { getThumbnail } from '../mockApi.js';
+import { getVideoCandidates, submitProcessingJob, getJobStatus } from '../api.js';
 import { Link, useParams } from 'react-router-dom';
 
 export default function Preview() {
-  const { filename } = useParams();
-  const [previewThumb, setPreviewThumb] = useState('');
+  const { filename: encodedFilename } = useParams();
+  const filename = encodedFilename ? decodeURIComponent(encodedFilename) : '';
+  const [videoCandidates, setVideoCandidates] = useState([]);
+  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
   const [currentColor, setCurrentColor] = useState("#000000")
   const [strength, setStrength] = useState(15);
   const canvasRef = useRef(null);
-  const imgRef = useRef(null);
-  const [imageReady, setImageReady] = useState(false);
+  const videoRef = useRef(null);
+  const [processStatus, setProcessStatus] = useState('idle');
+  const [processError, setProcessError] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [jobResult, setJobResult] = useState(null);
+
+  const previewVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
 
   useEffect(() => {
       const file = filename;
       if (!file) {
-        setPreviewThumb('');
+        setVideoCandidates([]);
+        setVideoCandidateIndex(0);
         return;
       }
-  
-      getThumbnail(file)
-        .then((thumbnailUrl) => setPreviewThumb(thumbnailUrl))
-        .catch(() => setPreviewThumb(''));
+
+      setVideoCandidates(getVideoCandidates(file));
+      setVideoCandidateIndex(0);
     }, [filename]);
 
     useEffect(() => {
-      if (!previewThumb) return;
-      setImageReady(false);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        imgRef.current = img;
-        setImageReady(true);
-      };
-      img.src = previewThumb;
-    }, [previewThumb]);
-
-    useEffect(() => {
-      if (!imageReady) return;
-      const img = imgRef.current;
+      if (!previewVideoUrl) return;
+      const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!img || !canvas) return;
+      if (!video || !canvas) return;
 
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const px = data.data;
+      let rafId = null;
 
-      for (let i = 0; i < px.length; i += 4) {
-        // px[i]     = red channel of this pixel (0-255)
-        // px[i + 1] = green channel
-        // px[i + 2] = blue channel
-        // px[i + 3] = alpha (transparency, usually leave alone)
-        //
-        // Your algorithm from 334 goes here. Look at the pixel above,
-        // look at `color` and `tolerance`, decide the pixel's new value,
-        // and write it back the same way:
-        //   px[i]     = newRed;
-        //   px[i + 1] = newGreen;
-        //   px[i + 2] = newBlue;
+      const drawFrame = () => {
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
 
-        // Parse the hex color string into RGB components
-        const r = parseInt(currentColor.slice(1, 3), 16);
-        const g = parseInt(currentColor.slice(3, 5), 16);
-        const b = parseInt(currentColor.slice(5, 7), 16);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            rafId = requestAnimationFrame(drawFrame);
+            return;
+          }
 
-        // Euclidean distance between this pixel's color and the target color
-        // (mirrors DistanceImageBinarizer + ColorDistanceFinder)
-        const dr = px[i]     - r;
-        const dg = px[i + 1] - g;
-        const db = px[i + 2] - b;
-        const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const px = data.data;
 
-        // `strength` is 0–100; scale it to the max possible Euclidean distance (~441)
-        // to match Java's integer threshold concept
-        const threshold = (strength / 100) * 441;
+          const r = parseInt(currentColor.slice(1, 3), 16);
+          const g = parseInt(currentColor.slice(3, 5), 16);
+          const b = parseInt(currentColor.slice(5, 7), 16);
+          const threshold = (strength / 100) * 441;
 
-        // White (1) if dist < threshold, black (0) otherwise
-        // mirrors: distanceFinder.distance(color, targetColor) < threshold → 1
-        if (dist < threshold) {
-          px[i] = px[i + 1] = px[i + 2] = 255; // white
-        } else {
-          px[i] = px[i + 1] = px[i + 2] = 0;   // black
+          for (let i = 0; i < px.length; i += 4) {
+            const dr = px[i] - r;
+            const dg = px[i + 1] - g;
+            const db = px[i + 2] - b;
+            const dist = Math.sqrt(dr * dr + dg * dg + db * db);
+
+            if (dist < threshold) {
+              px[i] = px[i + 1] = px[i + 2] = 255;
+            } else {
+              px[i] = px[i + 1] = px[i + 2] = 0;
+            }
+          }
+
+          ctx.putImageData(data, 0, 0);
         }
+
+        rafId = requestAnimationFrame(drawFrame);
+      };
+
+      rafId = requestAnimationFrame(drawFrame);
+
+      return () => {
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId);
+        }
+      };
+    }, [previewVideoUrl, currentColor, strength]);
+
+    function handleVideoError() {
+      setVideoCandidateIndex((currentIndex) => {
+        const nextIndex = currentIndex + 1;
+        return nextIndex < videoCandidates.length ? nextIndex : currentIndex;
+      });
+    }
+
+    async function handleProcess() {
+      if (!filename) {
+        return;
       }
 
-      ctx.putImageData(data, 0, 0);
-    }, [imageReady, currentColor, strength]);
+      setProcessError('');
+      setProcessStatus('submitting');
+      setJobResult(null);
+
+      try {
+        const submission = await submitProcessingJob(filename, currentColor, strength);
+        const newJobId = submission?.jobId;
+
+        if (!newJobId) {
+          throw new Error('Server did not return a jobId.');
+        }
+
+        setJobId(newJobId);
+
+        if (submission?.status === 'completed' || submission?.status === 'complete') {
+          setJobResult(submission?.data ?? submission);
+          setProcessStatus('completed');
+          return;
+        }
+
+        setProcessStatus('polling');
+
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const polled = await getJobStatus(newJobId);
+          const status = polled?.status ?? polled?.data?.status ?? 'completed';
+
+          if (status === 'completed' || status === 'complete') {
+            setJobResult(polled?.data ?? polled);
+            setProcessStatus('completed');
+            return;
+          }
+
+          if (status === 'failed' || status === 'error') {
+            throw new Error(polled?.error ?? 'Processing failed on server.');
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 700));
+        }
+
+        throw new Error('Timed out waiting for server results.');
+      } catch (err) {
+        setProcessStatus('error');
+        setProcessError(err instanceof Error ? err.message : 'Could not process video.');
+      }
+    }
 
   return (
     <section className="space-y-5">
@@ -125,16 +182,26 @@ export default function Preview() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
-          {previewThumb === "" ? (
-            <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
-              Loading...
-            </div>
+          {previewVideoUrl ? (
+            <video
+              key={`${filename}-${previewVideoUrl}`}
+              ref={videoRef}
+              src={previewVideoUrl}
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onError={handleVideoError}
+              className="max-h-full max-w-full rounded-md border border-app-panel bg-black object-contain"
+            >
+              Sorry, your browser cannot play this video.
+            </video>
           ) : (
-            <img
-              src={previewThumb}
-              alt={`Preview thumbnail for ${filename}`}
-              className="max-h-full max-w-full rounded-md border border-app-panel object-contain"
-            />
+            <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
+              No video preview available.
+            </div>
           )}
         </div>
 
@@ -154,11 +221,31 @@ export default function Preview() {
           >
             Back to Videos
           </Link>
-          <div className="rounded-md border border-app-border bg-app-green/20 px-5 py-2 font-medium text-app-green">
-            Ready to process: {filename}
-          </div>
+          <button
+            type="button"
+            onClick={handleProcess}
+            disabled={processStatus === 'submitting' || processStatus === 'polling'}
+            className="rounded-md border border-app-green bg-app-green/20 px-5 py-2 font-medium text-app-green transition hover:bg-app-green/30 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {processStatus === 'submitting' || processStatus === 'polling'
+              ? 'Processing...'
+              : `Process ${filename}`}
+          </button>
         </div>
       </div>
+
+      {jobId ? (
+        <div className="rounded-md border border-app-border bg-white px-5 py-4 shadow-soft">
+          <p className="text-sm text-app-muted">Job ID: {jobId}</p>
+          <p className="text-base font-medium text-app-ink">Status: {processStatus}</p>
+          {processError ? <p className="mt-2 text-sm text-red-700">{processError}</p> : null}
+          {jobResult ? (
+            <pre className="mt-3 max-h-52 overflow-auto rounded bg-app-panel/30 p-3 text-xs text-app-ink">
+              {JSON.stringify(jobResult, null, 2)}
+            </pre>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

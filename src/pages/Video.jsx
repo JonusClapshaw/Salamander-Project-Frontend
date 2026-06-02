@@ -1,12 +1,55 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getThumbnail, getVideos } from '../api.js';
+import { getThumbnail, getVideoCandidates, getVideos } from '../api.js';
+
+function normalizeVideoItem(item, index) {
+  if (typeof item === 'string') {
+    return {
+      id: item,
+      filename: item,
+      label: item,
+      durationSeconds: null,
+    };
+  }
+
+  if (item && typeof item === 'object') {
+    const filename = item.filename ?? item.name ?? '';
+    const id = item.id ?? filename ?? `video-${index}`;
+
+    return {
+      id,
+      filename,
+      label: item.name ?? filename ?? `Video ${index + 1}`,
+      durationSeconds: item.durationSeconds ?? null,
+    };
+  }
+
+  const fallback = String(item ?? `video-${index}`);
+  return {
+    id: fallback,
+    filename: fallback,
+    label: fallback,
+    durationSeconds: null,
+  };
+}
+
+function formatDuration(durationSeconds) {
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+    return '';
+  }
+
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = durationSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
 
 export default function Videos() {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState('');
   const [hoveredVideo, setHoveredVideo] = useState('');
   const [previewThumb, setPreviewThumb] = useState('');
+  const [videoCandidates, setVideoCandidates] = useState([]);
+  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
 
   const [loading, setLoading] = useState(true);
 
@@ -14,10 +57,14 @@ export default function Videos() {
 
   useEffect(() => {
     getVideos().then((data) => {
+        const normalizedVideos = Array.isArray(data)
+          ? data.map((item, index) => normalizeVideoItem(item, index)).filter((video) => video.filename)
+          : [];
+
         setLoading(false);
-        setVideos(data);
-        setSelectedVideo(data[0] ?? '');
-        setHoveredVideo(data[0] ?? '');
+        setVideos(normalizedVideos);
+        setSelectedVideo(normalizedVideos[0]?.filename ?? '');
+        setHoveredVideo(normalizedVideos[0]?.filename ?? '');
     }).catch((err) => {
         setError(err.message);
         setLoading(false);
@@ -28,13 +75,27 @@ export default function Videos() {
     const fileToPreview = hoveredVideo || selectedVideo;
     if (!fileToPreview) {
       setPreviewThumb('');
+      setVideoCandidates([]);
+      setVideoCandidateIndex(0);
       return;
     }
+
+    setVideoCandidates(getVideoCandidates(fileToPreview));
+    setVideoCandidateIndex(0);
 
     getThumbnail(fileToPreview)
       .then((thumbnailUrl) => setPreviewThumb(thumbnailUrl))
       .catch(() => setPreviewThumb(''));
   }, [hoveredVideo, selectedVideo]);
+
+  const activeVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
+
+  function handleVideoError() {
+    setVideoCandidateIndex((currentIndex) => {
+      const nextIndex = currentIndex + 1;
+      return nextIndex < videoCandidates.length ? nextIndex : currentIndex;
+    });
+  }
 
   if(loading) {
     return <p className="text-lg">Loading videos...</p>;
@@ -55,22 +116,23 @@ export default function Videos() {
 
           <div className="min-h-80 rounded-md border border-app-border bg-white p-6 shadow-soft">
             <ul className="space-y-3 text-lg">
-              {videos.map((filename) => (
+              {videos.map((video, index) => (
                 <li
-                  key={filename}
+                  key={`${video.id}-${video.filename}-${index}`}
                   className="flex flex-wrap items-center gap-2"
-                  onMouseEnter={() => setHoveredVideo(filename)}
+                  onMouseEnter={() => setHoveredVideo(video.filename)}
                   onMouseLeave={() => setHoveredVideo('')}
                 >
                   <button
                     type="button"
-                    className={`text-left transition ${selectedVideo === filename ? 'font-semibold text-app-blue' : 'text-app-ink hover:text-app-blue'}`}
-                    onClick={() => setSelectedVideo(filename)}
+                    className={`text-left transition ${selectedVideo === video.filename ? 'font-semibold text-app-blue' : 'text-app-ink hover:text-app-blue'}`}
+                    onClick={() => setSelectedVideo(video.filename)}
                   >
-                    {filename}
+                    {video.label}
+                    {video.durationSeconds !== null ? ` (${formatDuration(video.durationSeconds)})` : ''}
                   </button>
                   <Link
-                    to={`/preview/${filename}`}
+                    to={`/preview/${encodeURIComponent(video.filename)}`}
                     className="font-medium text-app-amber underline-offset-4 transition hover:underline"
                   >
                     [Preview]
@@ -82,7 +144,22 @@ export default function Videos() {
         </div>
 
         <div className="rounded-md border border-app-border bg-white p-6 shadow-soft">
-          {previewThumb ? (
+          {activeVideoUrl ? (
+            <video
+              key={`${hoveredVideo || selectedVideo}-${activeVideoUrl}`}
+              src={activeVideoUrl}
+              controls
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onError={handleVideoError}
+              className="mb-5 h-56 w-full rounded-md border border-app-panel bg-black object-cover md:h-72"
+            >
+              Sorry, your browser cannot play this video.
+            </video>
+          ) : previewThumb ? (
             <img
               src={previewThumb}
               alt={`Preview thumbnail for ${hoveredVideo || selectedVideo}`}
@@ -101,7 +178,7 @@ export default function Videos() {
 
       <div className="text-center">
         <Link
-          to={selectedVideo ? `/preview/${selectedVideo}` : '/videos'}
+          to={selectedVideo ? `/preview/${encodeURIComponent(selectedVideo)}` : '/videos'}
           className="inline-block rounded-md border border-app-border bg-white px-12 py-3 text-2xl font-medium shadow-soft transition hover:-translate-y-0.5 hover:bg-app-panel"
         >
           Continue
