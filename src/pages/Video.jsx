@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getThumbnail, getVideoCandidates, getVideos } from '../api.js';
 
@@ -47,67 +47,97 @@ export default function Videos() {
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState('');
   const [hoveredVideo, setHoveredVideo] = useState('');
-  const [previewThumb, setPreviewThumb] = useState('');
-  const [videoCandidates, setVideoCandidates] = useState([]);
-  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
-
+  const [thumbnailByFile, setThumbnailByFile] = useState({});
+  const [videoCandidateIndexByFile, setVideoCandidateIndexByFile] = useState({});
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    getVideos().then((data) => {
+    getVideos()
+      .then((data) => {
         const normalizedVideos = Array.isArray(data)
           ? data.map((item, index) => normalizeVideoItem(item, index)).filter((video) => video.filename)
           : [];
 
-        setLoading(false);
         setVideos(normalizedVideos);
         setSelectedVideo(normalizedVideos[0]?.filename ?? '');
         setHoveredVideo(normalizedVideos[0]?.filename ?? '');
-    }).catch((err) => {
+        setLoading(false);
+      })
+      .catch((err) => {
         setError(err.message);
         setLoading(false);
-    });
+      });
   }, []);
 
+  const fileToPreview = hoveredVideo || selectedVideo;
+  const videoCandidates = useMemo(() => {
+    return fileToPreview ? getVideoCandidates(fileToPreview) : [];
+  }, [fileToPreview]);
+  const videoCandidateIndex = fileToPreview ? (videoCandidateIndexByFile[fileToPreview] ?? 0) : 0;
+  const activeVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
+  const previewThumb = fileToPreview ? (thumbnailByFile[fileToPreview] ?? '') : '';
+
   useEffect(() => {
-    const fileToPreview = hoveredVideo || selectedVideo;
     if (!fileToPreview) {
-      setPreviewThumb('');
-      setVideoCandidates([]);
-      setVideoCandidateIndex(0);
       return;
     }
 
-    setVideoCandidates(getVideoCandidates(fileToPreview));
-    setVideoCandidateIndex(0);
+    if (thumbnailByFile[fileToPreview] !== undefined) {
+      return;
+    }
+
+    let cancelled = false;
 
     getThumbnail(fileToPreview)
-      .then((thumbnailUrl) => setPreviewThumb(thumbnailUrl))
-      .catch(() => setPreviewThumb(''));
-  }, [hoveredVideo, selectedVideo]);
+      .then((thumbnailUrl) => {
+        if (!cancelled) {
+          setThumbnailByFile((previous) => ({
+            ...previous,
+            [fileToPreview]: thumbnailUrl,
+          }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setThumbnailByFile((previous) => ({
+            ...previous,
+            [fileToPreview]: '',
+          }));
+        }
+      });
 
-  const activeVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
+    return () => {
+      cancelled = true;
+    };
+  }, [fileToPreview, thumbnailByFile]);
 
   function handleVideoError() {
-    setVideoCandidateIndex((currentIndex) => {
+    if (!fileToPreview) {
+      return;
+    }
+
+    setVideoCandidateIndexByFile((previous) => {
+      const currentIndex = previous[fileToPreview] ?? 0;
       const nextIndex = currentIndex + 1;
-      return nextIndex < videoCandidates.length ? nextIndex : currentIndex;
+
+      return {
+        ...previous,
+        [fileToPreview]: nextIndex < videoCandidates.length ? nextIndex : currentIndex,
+      };
     });
   }
 
-  if(loading) {
+  if (loading) {
     return <p className="text-lg">Loading videos...</p>;
   }
 
-  if(error) {
+  if (error) {
     return <p className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-700">Could not load videos: {error}</p>;
   }
 
   return (
     <section className="space-y-6">
-
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
           <div className="rounded-md border border-app-border bg-white px-6 py-6 text-center text-2xl font-medium shadow-soft">
@@ -146,7 +176,7 @@ export default function Videos() {
         <div className="rounded-md border border-app-border bg-white p-6 shadow-soft">
           {activeVideoUrl ? (
             <video
-              key={`${hoveredVideo || selectedVideo}-${activeVideoUrl}`}
+              key={`${fileToPreview}-${activeVideoUrl}`}
               src={activeVideoUrl}
               controls
               autoPlay
@@ -162,12 +192,12 @@ export default function Videos() {
           ) : previewThumb ? (
             <img
               src={previewThumb}
-              alt={`Preview thumbnail for ${hoveredVideo || selectedVideo}`}
+              alt={`Preview thumbnail for ${fileToPreview}`}
               className="mb-5 h-56 w-full rounded-md border border-app-panel object-cover md:h-72"
             />
           ) : (
             <div className="mb-5 flex h-56 w-full items-center justify-center rounded-md border border-dashed border-app-panel bg-app-panel/30 text-center text-app-muted md:h-72">
-              Thumbnail if hovering over a video link
+              No preview available.
             </div>
           )}
           <p className="text-center text-xl text-app-muted">

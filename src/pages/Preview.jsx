@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getVideoCandidates, submitProcessingJob, getJobStatus } from '../api.js';
 import { Link, useParams } from 'react-router-dom';
 
 export default function Preview() {
   const { filename: encodedFilename } = useParams();
   const filename = encodedFilename ? decodeURIComponent(encodedFilename) : '';
-  const [videoCandidates, setVideoCandidates] = useState([]);
-  const [videoCandidateIndex, setVideoCandidateIndex] = useState(0);
+  const [videoCandidateIndexByFile, setVideoCandidateIndexByFile] = useState({});
   const [currentColor, setCurrentColor] = useState("#000000")
   const [strength, setStrength] = useState(15);
   const canvasRef = useRef(null);
@@ -16,19 +15,11 @@ export default function Preview() {
   const [jobId, setJobId] = useState('');
   const [jobResult, setJobResult] = useState(null);
 
+  const videoCandidates = useMemo(() => {
+    return filename ? getVideoCandidates(filename) : [];
+  }, [filename]);
+  const videoCandidateIndex = filename ? (videoCandidateIndexByFile[filename] ?? 0) : 0;
   const previewVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
-
-  useEffect(() => {
-      const file = filename;
-      if (!file) {
-        setVideoCandidates([]);
-        setVideoCandidateIndex(0);
-        return;
-      }
-
-      setVideoCandidates(getVideoCandidates(file));
-      setVideoCandidateIndex(0);
-    }, [filename]);
 
     useEffect(() => {
       if (!previewVideoUrl) return;
@@ -89,9 +80,17 @@ export default function Preview() {
     }, [previewVideoUrl, currentColor, strength]);
 
     function handleVideoError() {
-      setVideoCandidateIndex((currentIndex) => {
+      if (!filename) {
+        return;
+      }
+
+      setVideoCandidateIndexByFile((previous) => {
+        const currentIndex = previous[filename] ?? 0;
         const nextIndex = currentIndex + 1;
-        return nextIndex < videoCandidates.length ? nextIndex : currentIndex;
+        return {
+          ...previous,
+          [filename]: nextIndex < videoCandidates.length ? nextIndex : currentIndex,
+        };
       });
     }
 
