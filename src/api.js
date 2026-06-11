@@ -79,3 +79,44 @@ export async function getJobStatus(jobId) {
   const encodedJobId = encodeURIComponent(jobId);
   return fetchJson(`/api/results?jobId=${encodedJobId}`);
 }
+
+function getFilenameFromContentDisposition(headerValue) {
+  if (!headerValue) {
+    return '';
+  }
+
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const asciiMatch = headerValue.match(/filename="?([^";]+)"?/i);
+  return asciiMatch?.[1] ?? '';
+}
+
+export async function downloadJobCsv(jobId) {
+  const encodedJobId = encodeURIComponent(jobId);
+  const response = await fetch(apiUrl(`/api/download/${encodedJobId}`));
+
+  if (!response.ok) {
+    throw new Error(`Download failed (${response.status}).`);
+  }
+
+  const csvBlob = await response.blob();
+  const contentDisposition = response.headers.get('Content-Disposition');
+  const filenameFromHeader = getFilenameFromContentDisposition(contentDisposition);
+  const downloadName = filenameFromHeader || `${jobId}.csv`;
+
+  const url = URL.createObjectURL(csvBlob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = downloadName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

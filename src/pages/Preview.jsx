@@ -1,6 +1,29 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { getVideoCandidates, submitProcessingJob, getJobStatus } from '../api.js';
+import { getVideoCandidates, submitProcessingJob, getJobStatus, downloadJobCsv } from '../api.js';
 import { Link, useParams } from 'react-router-dom';
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getJobSnapshot(payload) {
+  const data = payload?.data ?? payload;
+  const rawStatus = payload?.status ?? data?.status;
+  const normalizedStatus = typeof rawStatus === 'string' ? rawStatus.toLowerCase() : '';
+  const rawProgress = payload?.progressPercent ?? data?.progressPercent;
+  const numericProgress = Number(rawProgress);
+
+  const progressPercent = Number.isFinite(numericProgress)
+    ? Math.max(0, Math.min(100, numericProgress))
+    : null;
+
+  return {
+    status: normalizedStatus,
+    progressPercent,
+    data,
+    error: payload?.error ?? data?.error,
+  };
+}
 
 export default function Preview() {
   const { filename: encodedFilename } = useParams();
@@ -11,7 +34,10 @@ export default function Preview() {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const [processStatus, setProcessStatus] = useState('idle');
+  const [progressPercent, setProgressPercent] = useState(0);
   const [processError, setProcessError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
+  const [downloadStatus, setDownloadStatus] = useState('idle');
   const [jobId, setJobId] = useState('');
   const [jobResult, setJobResult] = useState(null);
 
@@ -100,48 +126,85 @@ export default function Preview() {
       }
 
       setProcessError('');
+      setDownloadError('');
+      setDownloadStatus('idle');
       setProcessStatus('submitting');
+      setProgressPercent(0);
       setJobResult(null);
 
       try {
         const submission = await submitProcessingJob(filename, currentColor, strength);
         const newJobId = submission?.jobId;
+        const submissionSnapshot = getJobSnapshot(submission);
 
         if (!newJobId) {
           throw new Error('Server did not return a jobId.');
         }
 
         setJobId(newJobId);
+        if (submissionSnapshot.progressPercent !== null) {
+          setProgressPercent(submissionSnapshot.progressPercent);
+        }
 
-        if (submission?.status === 'completed' || submission?.status === 'complete') {
-          setJobResult(submission?.data ?? submission);
+        if (submissionSnapshot.status === 'completed' || submissionSnapshot.status === 'complete') {
+          setProgressPercent(100);
+          setJobResult(submissionSnapshot.data ?? submission);
           setProcessStatus('completed');
+          return;
+        }
+
+        if (submissionSnapshot.status === 'failed' || submissionSnapshot.status === 'error') {
+          setProcessStatus('failed');
+          setProcessError(submissionSnapshot.error ?? 'Processing failed on server.');
           return;
         }
 
         setProcessStatus('polling');
 
-        for (let attempt = 0; attempt < 10; attempt += 1) {
+        for (let attempt = 0; attempt < 300; attempt += 1) {
+          await sleep(700);
           const polled = await getJobStatus(newJobId);
-          const status = polled?.status ?? polled?.data?.status ?? 'completed';
+          const snapshot = getJobSnapshot(polled);
 
-          if (status === 'completed' || status === 'complete') {
-            setJobResult(polled?.data ?? polled);
+          if (snapshot.progressPercent !== null) {
+            setProgressPercent(snapshot.progressPercent);
+          }
+
+          if (snapshot.status === 'completed' || snapshot.status === 'complete') {
+            setProgressPercent(100);
+            setJobResult(snapshot.data ?? polled);
             setProcessStatus('completed');
             return;
           }
 
-          if (status === 'failed' || status === 'error') {
-            throw new Error(polled?.error ?? 'Processing failed on server.');
+          if (snapshot.status === 'failed' || snapshot.status === 'error') {
+            setProcessStatus('failed');
+            setProcessError(snapshot.error ?? 'Processing failed on server.');
+            return;
           }
-
-          await new Promise((resolve) => setTimeout(resolve, 700));
         }
 
         throw new Error('Timed out waiting for server results.');
       } catch (err) {
-        setProcessStatus('error');
+        setProcessStatus((current) => (current === 'failed' ? current : 'error'));
         setProcessError(err instanceof Error ? err.message : 'Could not process video.');
+      }
+    }
+
+    async function handleDownloadCsv() {
+      if (!jobId) {
+        return;
+      }
+
+      setDownloadError('');
+      setDownloadStatus('downloading');
+
+      try {
+        await downloadJobCsv(jobId);
+        setDownloadStatus('success');
+      } catch (err) {
+        setDownloadStatus('error');
+        setDownloadError(err instanceof Error ? err.message : 'Could not download CSV.');
       }
     }
 
@@ -230,6 +293,14 @@ export default function Preview() {
               ? 'Processing...'
               : `Process ${filename}`}
           </button>
+          <button
+            type="button"
+            onClick={handleDownloadCsv}
+            disabled={!jobId || processStatus !== 'completed' || downloadStatus === 'downloading'}
+            className="rounded-md border border-app-blue bg-app-blue/15 px-5 py-2 font-medium text-app-blue transition hover:bg-app-blue/25 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {downloadStatus === 'downloading' ? 'Downloading CSV...' : 'Download CSV'}
+          </button>
         </div>
       </div>
 
@@ -237,7 +308,22 @@ export default function Preview() {
         <div className="rounded-md border border-app-border bg-white px-5 py-4 shadow-soft">
           <p className="text-sm text-app-muted">Job ID: {jobId}</p>
           <p className="text-base font-medium text-app-ink">Status: {processStatus}</p>
+          <p className="mt-1 text-sm text-app-muted">Progress: {Math.round(progressPercent)}%</p>
+          <div
+            className="mt-2 h-2 w-full overflow-hidden rounded-full bg-app-panel/60"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progressPercent)}
+            aria-label="Processing progress"
+          >
+            <div
+              className="h-full bg-app-blue transition-all duration-300"
+              style={{ width: `${Math.round(progressPercent)}%` }}
+            />
+          </div>
           {processError ? <p className="mt-2 text-sm text-red-700">{processError}</p> : null}
+          {downloadError ? <p className="mt-2 text-sm text-red-700">{downloadError}</p> : null}
           {jobResult ? (
             <pre className="mt-3 max-h-52 overflow-auto rounded bg-app-panel/30 p-3 text-xs text-app-ink">
               {JSON.stringify(jobResult, null, 2)}
