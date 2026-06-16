@@ -153,6 +153,65 @@ export default function Preview() {
           }
 
           ctx.putImageData(data, 0, 0);
+
+          // Build a binary 2D array from the processed pixel data
+          const width = canvas.width;
+          const height = canvas.height;
+          const binary = [];
+          for (let row = 0; row < height; row++) {
+            binary[row] = [];
+            for (let col = 0; col < width; col++) {
+              const i = (row * width + col) * 4;
+              binary[row][col] = px[i] === 255 ? 1 : 0;
+            }
+          }
+
+          // DFS to find connected groups and their centroids
+          const visited = Array.from({ length: height }, () => new Array(width).fill(false));
+          const moves = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+          let largestGroup = null;
+
+          function collectPixels(row, col) {
+            const stack = [[row, col]];
+            let sumX = 0, sumY = 0, size = 0;
+            while (stack.length > 0) {
+              const [r, c] = stack.pop();
+              if (r < 0 || r >= height || c < 0 || c >= width || visited[r][c] || binary[r][c] === 0) continue;
+              visited[r][c] = true;
+              sumX += c;
+              sumY += r;
+              size++;
+              for (const [dr, dc] of moves) {
+                stack.push([r + dr, c + dc]);
+              }
+            }
+            return { size, cx: Math.floor(sumX / size), cy: Math.floor(sumY / size) };
+          }
+
+          for (let row = 0; row < height; row++) {
+            for (let col = 0; col < width; col++) {
+              if (binary[row][col] === 1 && !visited[row][col]) {
+                const group = collectPixels(row, col);
+                if (!largestGroup || group.size > largestGroup.size) {
+                  largestGroup = group;
+                }
+              }
+            }
+          }
+
+          // Draw the centroid indicator
+          if (largestGroup) {
+            const { cx, cy } = largestGroup;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
         }
 
         rafId = requestAnimationFrame(drawFrame);
