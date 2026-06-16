@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <section className="space-y-6 md:space-y-8">
       <div className="rounded-md border border-app-border bg-white/90 px-6 py-10 text-center shadow-soft md:px-12">
-        <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Salamander Tracker</h1>
+        <h1 className="text-4xl font-semibold tracking-tight text-app-blue md:text-5xl">Salamander Tracker</h1>
         <p className="mx-auto mt-3 max-w-xl text-base text-app-muted md:text-lg">
           Centroid finder created by Anthony and Jonus 
         </p>
@@ -25,7 +25,7 @@ export default function Home() {
           </p>
           <Link
             to="/videos"
-            className="mt-6 inline-block rounded-md border border-app-ink bg-app-ink px-4 py-2 text-white transition hover:-translate-y-0.5"
+            className="mt-6 inline-block rounded-md border border-app-blue bg-app-blue px-4 py-2 text-white transition hover:-translate-y-0.5 hover:bg-app-blue/90"
           >
             Open Video List
           </Link>

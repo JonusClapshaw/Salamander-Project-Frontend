@@ -8,19 +8,19 @@ export default function App() {
     <div className="min-h-screen bg-app-base text-app-ink">
       <header className="border-b border-app-panel bg-white/75 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4 md:px-8">
-          <Link to="/" className="text-lg font-semibold tracking-wide">
+          <Link to="/" className="text-lg font-semibold tracking-wide text-app-blue">
             Salamander Tracker
           </Link>
           <nav className="flex gap-2 text-sm font-medium md:text-base">
             <Link
               to="/"
-              className="rounded-md border border-app-panel px-3 py-1.5 transition hover:bg-app-panel/40"
+              className="rounded-md border border-app-panel px-3 py-1.5 transition hover:border-app-blue/30 hover:bg-app-blue/10"
             >
               Home
             </Link>
             <Link
               to="/videos"
-              className="rounded-md border border-app-panel px-3 py-1.5 transition hover:bg-app-panel/40"
+              className="rounded-md border border-app-panel px-3 py-1.5 transition hover:border-app-blue/30 hover:bg-app-blue/10"
             >
               Videos
             </Link>

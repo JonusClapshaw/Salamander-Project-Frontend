@@ -431,7 +431,7 @@ export default function Preview() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 to="/videos"
-                className="rounded-md border border-app-border bg-white px-4 py-2 text-sm font-medium shadow-soft transition hover:bg-app-panel/60"
+                className="rounded-md border border-app-border bg-white px-4 py-2 text-sm font-medium shadow-soft transition hover:border-app-blue/30 hover:bg-app-blue/10"
               >
                 Back to Videos
               </Link>

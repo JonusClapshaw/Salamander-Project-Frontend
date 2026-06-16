@@ -90,6 +90,11 @@ This publishes the dist folder to the gh-pages branch.
 - If downloads fail: verify /api/download/:jobId returns a file and correct HTTP status.
 - If backend is on another host: enable CORS for your frontend origin (for example http://localhost:5173).
 
+## Site Color Palette
+
+Primary colors: #fff4e2, #ff9f43, #1f9aa8
+Base, accent, and action colors used across the site.
+
 ## New Feature 
 
 ### Download status

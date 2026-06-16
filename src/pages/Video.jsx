@@ -140,7 +140,7 @@ export default function Videos() {
     <section className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
-          <div className="rounded-md border border-app-border bg-white px-6 py-6 text-center text-2xl font-medium shadow-soft">
+          <div className="rounded-md border border-app-border bg-white px-6 py-6 text-center text-2xl font-medium text-app-blue shadow-soft">
             Recordings:
           </div>
 
@@ -162,7 +162,7 @@ export default function Videos() {
                   </button>
                   <Link
                     to={`/preview/${encodeURIComponent(video.filename)}`}
-                    className="font-medium text-app-amber underline-offset-4 transition hover:underline"
+                    className="font-medium text-app-blue underline-offset-4 transition hover:underline"
                   >
                     [Preview]
                   </Link>
