@@ -92,8 +92,11 @@ This publishes the dist folder to the gh-pages branch.
 
 ## New Feature 
 
-- Download status
-  - Once you click to process the download it shows the percent comepletion
-  - After download is complete you can see the downloads output on the webpage itself before you download it  
+### Download status
+ Once you click to process the download it shows the percent comepletion
 
-## Screen shots
+<img src='./src/assets/Downloading.png'>
+
+After download is complete you can see the downloads output on the webpage itself before you download it  
+
+<img src='./src/assets/Output.png'>
