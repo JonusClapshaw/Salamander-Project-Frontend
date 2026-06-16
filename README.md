@@ -100,3 +100,12 @@ This publishes the dist folder to the gh-pages branch.
 After download is complete you can see the downloads output on the webpage itself before you download it  
 
 <img src='./src/assets/Output.png'>
+
+### Display Centroid
+After selecting your color, you can choose to display the center of the largest group
+
+<img src='./src/assets/Option.png'>
+
+The centroid will display as a red dot on the binarized preview
+
+<img src='./src/assets/Centroid.png'>
