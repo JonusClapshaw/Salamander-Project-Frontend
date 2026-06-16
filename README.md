@@ -1,26 +1,97 @@
-# React + Vite
+# Salamander Project Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Anthony and Jonus
 
-Currently, two official plugins are available:
+React + Vite frontend for browsing videos, sampling color, running processing, and downloading CSV results.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requirements
 
-## React Compiler
+- Node.js 18+ (Node.js 20 LTS recommended)
+- npm
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run Locally
 
-## Expanding the ESLint configuration
+1. Install dependencies
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# Salamander-Project-Frontend
+	npm install
+
+2. Start the frontend
+
+	npm run dev
+
+3. Open the URL shown in terminal (usually http://localhost:5173)
+
+## Connect To Any Backend
+
+This frontend reads backend base URL from Vite env variable:
+
+- VITE_API_BASE_URL
+
+Create a file named .env.local in the project root and add:
+
+VITE_API_BASE_URL=http://localhost:8080
+
+Then restart the frontend:
+
+npm run dev
+
+You can point this to someone else's backend URL as long as it exposes the required routes and allows CORS from your frontend origin.
+
+## Required Backend Endpoints
+
+The frontend expects these endpoints:
+
+- GET /api/videos
+- GET /thumbnail/:filename (or /api/thumbnail/:filename)
+- GET /video/:filename (or /api/video/:filename, /videos/:filename, /api/videos/:filename)
+- POST /api/process
+- GET /api/results?jobId=...
+- GET /api/download/:jobId
+
+## Process Request Body
+
+When starting processing, frontend sends:
+
+{
+  "filename": "example.mp4",
+  "targetColor": "FF00AA",
+  "threshold": 15
+}
+
+Notes:
+- targetColor is hex without the # character
+- threshold is 0-100
+
+## Build And Preview
+
+- Build:
+
+  npm run build
+
+- Preview built app locally:
+
+  npm run preview
 
 ## Deploy To GitHub Pages
 
-1. Install dependencies:
-	`npm install`
-2. Deploy:
-	`npm run deploy`
+1. Install dependencies
 
-This publishes the `dist` folder to the `gh-pages` branch.
+	npm install
+
+2. Deploy
+
+	npm run deploy
+
+This publishes the dist folder to the gh-pages branch.
+
+## Troubleshooting
+
+- If video list is empty: check /api/videos response and browser network tab.
+- If downloads fail: verify /api/download/:jobId returns a file and correct HTTP status.
+- If backend is on another host: enable CORS for your frontend origin (for example http://localhost:5173).
+
+## New Feature 
+
+- here
+
+## Screen shots
