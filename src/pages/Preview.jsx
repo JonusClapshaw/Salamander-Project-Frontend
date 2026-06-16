@@ -50,6 +50,7 @@ export default function Preview() {
   const [jobResult, setJobResult] = useState(null);
   const [hexInput, setHexInput] = useState('#000000');
   const [isSamplingColor, setIsSamplingColor] = useState(false);
+  const [showCentroid, setShowCentroid] = useState(true);
 
   const videoCandidates = useMemo(() => {
     return filename ? getVideoCandidates(filename) : [];
@@ -200,7 +201,7 @@ export default function Preview() {
           }
 
           // Draw the centroid indicator
-          if (largestGroup) {
+          if (largestGroup && showCentroid) {
             const { cx, cy } = largestGroup;
             ctx.beginPath();
             ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
@@ -224,7 +225,7 @@ export default function Preview() {
           cancelAnimationFrame(rafId);
         }
       };
-    }, [previewVideoUrl, currentColor, strength]);
+    }, [previewVideoUrl, currentColor, strength, showCentroid]);
 
     function handleVideoError() {
       if (!filename) {
@@ -382,6 +383,19 @@ export default function Preview() {
                 onChange={(e) => setStrength(Number(e.target.value))}
                 className="w-full accent-app-blue"
               />
+
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  id="showCentroid"
+                  type="checkbox"
+                  checked={showCentroid}
+                  onChange={(e) => setShowCentroid(e.target.checked)}
+                  className="accent-app-blue"
+                />
+                <label htmlFor="showCentroid" className="text-sm font-medium text-app-muted">
+                  Show centroid
+                </label>
+              </div>
             </div>
 
             {jobId ? (
