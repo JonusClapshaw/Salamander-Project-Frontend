@@ -332,7 +332,7 @@ export default function Preview() {
 
   return (
     <section className="space-y-5">
-      <div className="rounded-md border border-app-border bg-white/85 px-5 py-10 shadow-soft">
+      <div className="rounded-md border border-app-border bg-white/90 px-5 py-10 shadow-soft">
         <div className="text-center">
           <h1 className="text-center text-3xl font-semibold tracking-tight md:text-4xl">{filename}</h1>
         </div>
@@ -431,7 +431,7 @@ export default function Preview() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 to="/videos"
-                className="rounded-md border border-app-border bg-white px-4 py-2 text-sm font-medium shadow-soft transition hover:bg-app-panel"
+                className="rounded-md border border-app-border bg-white px-4 py-2 text-sm font-medium shadow-soft transition hover:bg-app-panel/60"
               >
                 Back to Videos
               </Link>

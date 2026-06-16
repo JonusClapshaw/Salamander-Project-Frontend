@@ -2,18 +2,18 @@
 @import "tailwindcss";
 
 @theme {
-	--color-app-base: #ececec;
-	--color-app-ink: #363738;
-	--color-app-muted: #55595f;
-	--color-app-panel: #d7d9e2;
-	--color-app-border: #9a9ca3;
-	--color-app-sand: #ffe52e;
-	--color-app-amber: #ffb22e;
-	--color-app-blue: #2f50ff;
-	--color-app-steel: #575e80;
-	--color-app-olive: #807a57;
-	--color-app-moss: #807157;
-	--color-app-green: #2f8f4f;
+	--color-app-base: #fff4e2;
+	--color-app-ink: #2c3a3f;
+	--color-app-muted: #5f6a6f;
+	--color-app-panel: #ffe3bf;
+	--color-app-border: #d7b98c;
+	--color-app-sand: #ffd166;
+	--color-app-amber: #ff9f43;
+	--color-app-blue: #1f9aa8;
+	--color-app-steel: #4f7380;
+	--color-app-olive: #b8a86f;
+	--color-app-moss: #8da25a;
+	--color-app-green: #2b9f77;
 
 	--font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 	--font-display: 'Space Grotesk', 'Outfit', ui-sans-serif, system-ui, sans-serif;
@@ -24,8 +24,9 @@
 		margin: 0;
 		min-height: 100vh;
 		background:
-			radial-gradient(circle at 15% 5%, rgb(255 178 46 / 20%), transparent 35%),
-			radial-gradient(circle at 90% 95%, rgb(47 80 255 / 12%), transparent 45%),
+			radial-gradient(circle at 10% 8%, rgb(255 159 67 / 30%), transparent 36%),
+			radial-gradient(circle at 88% 90%, rgb(31 154 168 / 18%), transparent 44%),
+			radial-gradient(circle at 60% 0%, rgb(255 209 102 / 20%), transparent 40%),
 			var(--color-app-base);
 		color: var(--color-app-ink);
 		font-family: var(--font-sans);
@@ -41,6 +42,6 @@
 
 @layer utilities {
 	.shadow-soft {
-		box-shadow: 0 10px 30px rgb(66 69 90 / 10%);
+		box-shadow: 0 14px 28px rgb(110 84 47 / 12%);
 	}
 }

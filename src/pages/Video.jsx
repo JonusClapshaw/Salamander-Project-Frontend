@@ -159,7 +159,6 @@ export default function Videos() {
                     onClick={() => setSelectedVideo(video.filename)}
                   >
                     {video.label}
-                    {video.durationSeconds !== null ? ` (${formatDuration(video.durationSeconds)})` : ''}
                   </button>
                   <Link
                     to={`/preview/${encodeURIComponent(video.filename)}`}

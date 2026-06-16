@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 export default function Home() {
   return (
     <section className="space-y-6 md:space-y-8">
-      <div className="rounded-md border border-app-border bg-white/80 px-6 py-10 text-center shadow-soft md:px-12">
+      <div className="rounded-md border border-app-border bg-white/90 px-6 py-10 text-center shadow-soft md:px-12">
         <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">Salamander Tracker</h1>
         <p className="mx-auto mt-3 max-w-xl text-base text-app-muted md:text-lg">
-          Build and review motion analysis sessions with the same structure shown in your wireframes.
+          Centroid finder created by Anthony and Jonus 
         </p>
       </div>
 

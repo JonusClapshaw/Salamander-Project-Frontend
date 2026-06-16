@@ -6,7 +6,7 @@ import Preview from './pages/Preview.jsx';
 export default function App() {
   return (
     <div className="min-h-screen bg-app-base text-app-ink">
-      <header className="border-b border-app-panel bg-white/70 backdrop-blur-sm">
+      <header className="border-b border-app-panel bg-white/75 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4 md:px-8">
           <Link to="/" className="text-lg font-semibold tracking-wide">
             Salamander Tracker

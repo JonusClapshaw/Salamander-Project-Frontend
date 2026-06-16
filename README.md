@@ -93,7 +93,7 @@ This publishes the dist folder to the gh-pages branch.
 ## New Feature 
 
 ### Download status
- Once you click to process the download it shows the percent comepletion
+Once you click to process the download it shows the percent comepletion
 
 <img src='./src/assets/Downloading.png'>
 
