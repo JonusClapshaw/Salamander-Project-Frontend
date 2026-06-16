@@ -205,15 +205,6 @@ export default function Videos() {
           </p>
         </div>
       </div>
-
-      <div className="text-center">
-        <Link
-          to={selectedVideo ? `/preview/${encodeURIComponent(selectedVideo)}` : '/videos'}
-          className="inline-block rounded-md border border-app-border bg-white px-12 py-3 text-2xl font-medium shadow-soft transition hover:-translate-y-0.5 hover:bg-app-panel"
-        >
-          Continue
-        </Link>
-      </div>
     </section>
   );
 }

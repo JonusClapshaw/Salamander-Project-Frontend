@@ -25,6 +25,14 @@ function getJobSnapshot(payload) {
   };
 }
 
+function normalizeHexColor(value) {
+  const sanitized = String(value ?? '').trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{6}$/.test(sanitized)) {
+    return `#${sanitized.toUpperCase()}`;
+  }
+  return null;
+}
+
 export default function Preview() {
   const { filename: encodedFilename } = useParams();
   const filename = encodedFilename ? decodeURIComponent(encodedFilename) : '';
@@ -40,12 +48,66 @@ export default function Preview() {
   const [downloadStatus, setDownloadStatus] = useState('idle');
   const [jobId, setJobId] = useState('');
   const [jobResult, setJobResult] = useState(null);
+  const [hexInput, setHexInput] = useState('#000000');
+  const [isSamplingColor, setIsSamplingColor] = useState(false);
 
   const videoCandidates = useMemo(() => {
     return filename ? getVideoCandidates(filename) : [];
   }, [filename]);
   const videoCandidateIndex = filename ? (videoCandidateIndexByFile[filename] ?? 0) : 0;
   const previewVideoUrl = videoCandidates[videoCandidateIndex] ?? '';
+
+    useEffect(() => {
+      setHexInput(currentColor);
+    }, [currentColor]);
+
+    function handleHexInputChange(event) {
+      const nextValue = event.target.value;
+      setHexInput(nextValue);
+
+      const normalized = normalizeHexColor(nextValue);
+      if (normalized) {
+        setCurrentColor(normalized);
+      }
+    }
+
+    function handleNativeColorChange(event) {
+      const nextColor = event.target.value;
+      setCurrentColor(nextColor);
+      setHexInput(nextColor.toUpperCase());
+    }
+
+    function handleVideoColorSample(event) {
+      const video = videoRef.current;
+      if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+        return;
+      }
+
+      const rect = video.getBoundingClientRect();
+      const scaleX = video.videoWidth / rect.width;
+      const scaleY = video.videoHeight / rect.height;
+      const sampleX = Math.max(0, Math.min(video.videoWidth - 1, Math.round((event.clientX - rect.left) * scaleX)));
+      const sampleY = Math.max(0, Math.min(video.videoHeight - 1, Math.round((event.clientY - rect.top) * scaleY)));
+
+      const offscreenCanvas = document.createElement('canvas');
+      offscreenCanvas.width = video.videoWidth;
+      offscreenCanvas.height = video.videoHeight;
+      const context = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+      if (!context) {
+        return;
+      }
+
+      context.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
+      const [r, g, b] = context.getImageData(sampleX, sampleY, 1, 1).data;
+      const sampledColor = `#${[r, g, b]
+        .map((channel) => channel.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase()}`;
+
+      setCurrentColor(sampledColor);
+      setHexInput(sampledColor);
+      setIsSamplingColor(false);
+    }
 
     useEffect(() => {
       if (!previewVideoUrl) return;
@@ -216,121 +278,147 @@ export default function Preview() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2">
-            <div className="grid grid-cols-3 max-w-lg rounded-md border border-app-border bg-white px-4 py-2 mx-2 shadow-soft">
-              <p className="text-center pt-2">Choose your color:</p>
-                <input 
-                    className="col-span-2 w-auto border border-app-border bg-white shadow-soft mt-2"
-                    type="color" 
-                    value={currentColor}
-                    onChange={(e) => setCurrentColor(e.target.value)}>
-                </input>
-            </div>
-        <div className="max-w-lg rounded-md border border-app-border bg-white px-4 py-2 mx-4 shadow-soft">
-            <label htmlFor="threshold" className="mb-1 block text-sm font-medium text-app-muted">
-            Strength: <span>{strength}</span>
-            </label>
-            <input
-            id="threshold"
-            type="range"
-            min="0"
-            max="100"
-            defaultValue="15"
-            onChange={(e) => setStrength(Number(e.target.value))}
-            className="w-full accent-app-blue"
-            />
-        </div>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
-          {previewVideoUrl ? (
-            <video
-              key={`${filename}-${previewVideoUrl}`}
-              ref={videoRef}
-              src={previewVideoUrl}
-              controls
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              onError={handleVideoError}
-              className="max-h-full max-w-full rounded-md border border-app-panel bg-black object-contain"
-            >
-              Sorry, your browser cannot play this video.
-            </video>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
-              No video preview available.
+        <div className="rounded-md border border-app-border bg-white shadow-soft h-full flex flex-col">
+          <div className="px-4 py-3 space-y-4">
+            <div>
+              <p className="mb-2 text-sm font-medium text-app-muted">Choose your color:</p>
+              <div className="grid grid-cols-[40px,1fr] items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="h-8 w-8 rounded border border-app-border"
+                  style={{ backgroundColor: currentColor }}
+                />
+                <input
+                  type="text"
+                  inputMode="text"
+                  value={hexInput}
+                  onChange={handleHexInputChange}
+                  aria-label="Hex color"
+                  className="w-full rounded-md border border-app-border px-2 py-1 text-sm text-app-ink shadow-soft focus:outline-none focus:ring-2 focus:ring-app-blue/40"
+                  placeholder="#RRGGBB"
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSamplingColor((current) => !current)}
+                  className="rounded-md border border-app-blue bg-app-blue/10 px-3 py-1 text-xs font-medium text-app-blue transition hover:bg-app-blue/20"
+                >
+                  {isSamplingColor ? 'Click video to sample...' : 'Sample From Video'}
+                </button>
+              </div>
             </div>
-          )}
+
+            <div className="border-t border-app-border pt-3">
+              <label htmlFor="threshold" className="mb-1 block text-sm font-medium text-app-muted">
+                Strength: <span>{strength}</span>
+              </label>
+              <input
+                id="threshold"
+                type="range"
+                min="0"
+                max="100"
+                value={strength}
+                onChange={(e) => setStrength(Number(e.target.value))}
+                className="w-full accent-app-blue"
+              />
+            </div>
+
+            {jobId ? (
+              <div className="border-t border-app-border pt-3">
+                <p className="text-sm text-app-muted">Job ID: {jobId}</p>
+                <p className="text-base font-medium text-app-ink">Status: {processStatus}</p>
+                <p className="mt-1 text-sm text-app-muted">Progress: {Math.round(progressPercent)}%</p>
+                <div
+                  className="mt-2 h-2 w-full overflow-hidden rounded-full bg-app-panel/60"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(progressPercent)}
+                  aria-label="Processing progress"
+                >
+                  <div
+                    className="h-full bg-app-blue transition-all duration-300"
+                    style={{ width: `${Math.round(progressPercent)}%` }}
+                  />
+                </div>
+                {processError ? <p className="mt-2 text-sm text-red-700">{processError}</p> : null}
+                {downloadError ? <p className="mt-2 text-sm text-red-700">{downloadError}</p> : null}
+                {jobResult ? (
+                  <pre className="mt-3 max-h-52 overflow-auto rounded bg-app-panel/30 p-3 text-xs text-app-ink">
+                    {JSON.stringify(jobResult, null, 2)}
+                  </pre>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-auto border-t border-app-border px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/videos"
+                className="rounded-md border border-app-border bg-white px-4 py-2 text-sm font-medium shadow-soft transition hover:bg-app-panel"
+              >
+                Back to Videos
+              </Link>
+              <button
+                type="button"
+                onClick={handleProcess}
+                disabled={processStatus === 'submitting' || processStatus === 'polling'}
+                className="rounded-md border border-app-green bg-app-green/20 px-4 py-2 text-sm font-medium text-app-green transition hover:bg-app-green/30 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {processStatus === 'submitting' || processStatus === 'polling'
+                  ? 'Processing...'
+                  : `Process ${filename}`}
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadCsv}
+                disabled={!jobId || processStatus !== 'completed' || downloadStatus === 'downloading'}
+                className="rounded-md border border-app-blue bg-app-blue/15 px-4 py-2 text-sm font-medium text-app-blue transition hover:bg-app-blue/25 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {downloadStatus === 'downloading' ? 'Downloading CSV...' : 'Download CSV'}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
-          <canvas
-            ref={canvasRef}
-            style={{ maxHeight: '100%', maxWidth: '100%' }}
-          />
-        </div>
-      </div>
+        <div className="grid gap-6">
+          <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
+            {previewVideoUrl ? (
+              <video
+                key={`${filename}-${previewVideoUrl}`}
+                ref={videoRef}
+                src={previewVideoUrl}
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                onError={handleVideoError}
+                onClick={handleVideoColorSample}
+                title={isSamplingColor ? 'Click to sample color from this frame' : undefined}
+                className={`max-h-full max-w-full rounded-md border border-app-panel bg-black object-contain ${isSamplingColor ? 'cursor-crosshair ring-2 ring-app-blue/60' : ''}`}
+              >
+                Sorry, your browser cannot play this video.
+              </video>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-app-panel/40 text-center text-app-muted">
+                No video preview available.
+              </div>
+            )}
+          </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <Link
-            to="/videos"
-            className="rounded-md border border-app-border bg-white px-5 py-2 font-medium shadow-soft transition hover:bg-app-panel"
-          >
-            Back to Videos
-          </Link>
-          <button
-            type="button"
-            onClick={handleProcess}
-            disabled={processStatus === 'submitting' || processStatus === 'polling'}
-            className="rounded-md border border-app-green bg-app-green/20 px-5 py-2 font-medium text-app-green transition hover:bg-app-green/30 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {processStatus === 'submitting' || processStatus === 'polling'
-              ? 'Processing...'
-              : `Process ${filename}`}
-          </button>
-          <button
-            type="button"
-            onClick={handleDownloadCsv}
-            disabled={!jobId || processStatus !== 'completed' || downloadStatus === 'downloading'}
-            className="rounded-md border border-app-blue bg-app-blue/15 px-5 py-2 font-medium text-app-blue transition hover:bg-app-blue/25 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {downloadStatus === 'downloading' ? 'Downloading CSV...' : 'Download CSV'}
-          </button>
-        </div>
-      </div>
-
-      {jobId ? (
-        <div className="rounded-md border border-app-border bg-white px-5 py-4 shadow-soft">
-          <p className="text-sm text-app-muted">Job ID: {jobId}</p>
-          <p className="text-base font-medium text-app-ink">Status: {processStatus}</p>
-          <p className="mt-1 text-sm text-app-muted">Progress: {Math.round(progressPercent)}%</p>
-          <div
-            className="mt-2 h-2 w-full overflow-hidden rounded-full bg-app-panel/60"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(progressPercent)}
-            aria-label="Processing progress"
-          >
-            <div
-              className="h-full bg-app-blue transition-all duration-300"
-              style={{ width: `${Math.round(progressPercent)}%` }}
+          <div className="rounded-md border border-app-border bg-white shadow-soft flex items-center justify-center h-72 p-3">
+            <canvas
+              ref={canvasRef}
+              style={{ maxHeight: '100%', maxWidth: '100%' }}
             />
           </div>
-          {processError ? <p className="mt-2 text-sm text-red-700">{processError}</p> : null}
-          {downloadError ? <p className="mt-2 text-sm text-red-700">{downloadError}</p> : null}
-          {jobResult ? (
-            <pre className="mt-3 max-h-52 overflow-auto rounded bg-app-panel/30 p-3 text-xs text-app-ink">
-              {JSON.stringify(jobResult, null, 2)}
-            </pre>
-          ) : null}
         </div>
-      ) : null}
+      </div>
     </section>
   );
 }
