@@ -92,6 +92,8 @@ This publishes the dist folder to the gh-pages branch.
 
 ## New Feature 
 
-- here
+- Download status
+  - Once you click to process the download it shows the percent comepletion
+  - After download is complete you can see the downloads output on the webpage itself before you download it  
 
 ## Screen shots
