@@ -255,7 +255,8 @@ export default function Preview() {
       setJobResult(null);
 
       try {
-        const submission = await submitProcessingJob(filename, currentColor, strength);
+        const scaledThreshold = Math.round((strength / 100) * 441);
+        const submission = await submitProcessingJob(filename, currentColor, scaledThreshold);
         const newJobId = submission?.jobId;
         const submissionSnapshot = getJobSnapshot(submission);
 
